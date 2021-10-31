@@ -1,0 +1,2 @@
+streamlit
+git+https://github.com/CPA-Analytics/pyech@dev#egg=pyech

@@ -1,2 +1,3 @@
-# pyech-app
-PyECH webapp.
+# PyECH Webapp
+
+PyECH minimal UI built with Streamlit.
