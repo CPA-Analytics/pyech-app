@@ -200,9 +200,9 @@ pytz==2021.3
     # via pandas
 pytz-deprecation-shim==0.1.0.post0
     # via tzlocal
-pywin32==302
+#pywin32==302
     # via jupyter-core
-pywinpty==1.1.5
+#pywinpty==1.1.5
     # via terminado
 pyzmq==22.3.0
     # via
