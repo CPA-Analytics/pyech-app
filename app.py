@@ -16,12 +16,18 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 categorical_dict = {"Auto": None, "Categórica": True, "No categórica": False}
 function_dict = {"Suma": "sum", "Promedio": "mean", "Recuento": "count"}
 
-#@st.cache(show_spinner=False)
-def load_survey(year, weights):
+
+def load_survey(year):
     survey = ECH()
-    survey.load(year=year, weights=weights)
+    survey.load(year=year)
     st.session_state.ech = survey
     return
+
+
+def set_weights(weights):
+    st.session_state.ech.weights = weights
+    return
+
 
 st.sidebar.image("https://github.com/CPA-Analytics/pyech/raw/master/logo.png")
 st.sidebar.markdown("PyECH es un procesador de la Encuesta Continua de Hogares del INE escrito en Python.")
@@ -42,9 +48,17 @@ st.markdown("---")
 
 if section == "Carga":
     col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
     year_select = col1.selectbox(label="Seleccionar año de encuesta", options=list(range(2006, 2021)), index=13)
-    weights_text = col2.text_input("Seleccionar ponderador", value="pesoano")
-    load_button = st.button("Cargar", on_click=load_survey, args=(year_select, weights_text))
+    survey_load_button = col3.button("Cargar encuesta", on_click=load_survey, args=(year_select,))
+    if "ech" in st.session_state:
+        weights_select = col2.selectbox("Seleccionar ponderador", options=["pesoano", "pesosem", "pesotrim", "pesomen"],
+                                        index=0)
+        weights_set_button = col4.button("Seleccionar ponderador", on_click=set_weights, args=(weights_select,))
+        st.caption("Las encuestas de algunos años no tienen todos los ponderadores.")
+
+elif section != "Carga" and "ech" in st.session_state and st.session_state.ech.weights not in st.session_state.ech.data.columns:
+    st.markdown(f"El ponderador {st.session_state.ech.weights} no está disponible en la ECH {st.session_state.ech.data['anio'][0]}. Seleccionar otro.")
 
 elif section == "Explorar diccionario" and "ech" in st.session_state:
     col1, col2 = st.columns(2)

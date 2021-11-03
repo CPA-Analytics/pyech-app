@@ -178,7 +178,7 @@ pycparser==2.20
     # via cffi
 pydeck==0.7.1
     # via streamlit
-pyech @ git+https://github.com/CPA-Analytics/pyech@dev
+pyech @ git+https://github.com/CPA-Analytics/pyech@45c93cf5988bab88faa4d0b527ea0ea8b156e7d3
     # via -r requirements.in
 pygments==2.10.0
     # via
@@ -200,9 +200,9 @@ pytz==2021.3
     # via pandas
 pytz-deprecation-shim==0.1.0.post0
     # via tzlocal
-#pywin32==302
+pywin32==302
     # via jupyter-core
-#pywinpty==1.1.5
+pywinpty==1.1.5
     # via terminado
 pyzmq==22.3.0
     # via
