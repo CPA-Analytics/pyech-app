@@ -178,7 +178,7 @@ pycparser==2.20
     # via cffi
 pydeck==0.7.1
     # via streamlit
-pyech @ git+https://github.com/CPA-Analytics/pyech@45c93cf5988bab88faa4d0b527ea0ea8b156e7d3
+pyech @ git+https://github.com/CPA-Analytics/pyech@fcf4c5c7c12eb41fab43d1141c4f83204291480a
     # via -r requirements.in
 pygments==2.10.0
     # via
