@@ -15,6 +15,7 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 categorical_dict = {"Auto": None, "Categórica": True, "No categórica": False}
 function_dict = {"Suma": "sum", "Promedio": "mean", "Recuento": "count"}
+weights_dict = {"Anual": "pesoano", "Semestral": "pesosem", "Trimestral": "pesotri", "Mensual": "pesomen"}
 
 
 def load_survey(year):
@@ -47,15 +48,14 @@ if "ech" in st.session_state:
 st.markdown("---")
 
 if section == "Carga":
-    col1, col2 = st.columns(2)
-    col3, col4 = st.columns(2)
-    year_select = col1.selectbox(label="Seleccionar año de encuesta", options=list(range(2006, 2021)), index=13)
-    survey_load_button = col3.button("Cargar encuesta", on_click=load_survey, args=(year_select,))
+    year_select = st.selectbox(label="Seleccionar año de encuesta", options=list(range(2006, 2021)), index=13)
+    survey_load_button = st.button("Aceptar", on_click=load_survey, args=(year_select,), key=0)
     if "ech" in st.session_state:
-        weights_select = col2.selectbox("Seleccionar ponderador", options=["pesoano", "pesosem", "pesotrim", "pesomen"],
+        weights_select = st.selectbox("Seleccionar ponderador", options=weights_dict.keys(),
                                         index=0)
-        weights_set_button = col4.button("Seleccionar ponderador", on_click=set_weights, args=(weights_select,))
-        st.caption("Las encuestas de algunos años no tienen todos los ponderadores.")
+        st.caption("No todos los ponderadores están presentes en todas las encuestas.")
+        weights_set_button = st.button("Aceptar", on_click=set_weights, args=(weights_dict[weights_select],), key=1)
+
 
 elif section != "Carga" and "ech" in st.session_state and st.session_state.ech.weights not in st.session_state.ech.data.columns:
     st.markdown(f"El ponderador {st.session_state.ech.weights} no está disponible en la ECH {st.session_state.ech.data['anio'][0]}. Seleccionar otro.")
