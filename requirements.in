@@ -1,2 +1,2 @@
 streamlit
-git+https://github.com/CPA-Analytics/pyech@fcf4c5c7c12eb41fab43d1141c4f83204291480a#egg=pyech
+git+https://github.com/CPA-Analytics/pyech@683cd2ac72fea8bbb8a9e35380ed35238836b963#egg=pyech
