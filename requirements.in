@@ -1,2 +1,6 @@
-streamlit
+dash
+dash-bootstrap-components
+dash-bootstrap-templates
+plotly
 git+https://github.com/CPA-Analytics/pyech@04187d173215c74afd10c6d47e56623c6afc5091#egg=pyech
+black

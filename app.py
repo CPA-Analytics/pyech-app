@@ -1,85 +1,605 @@
-import streamlit as st
+import ast
+
+import dash_bootstrap_components as dbc
+import plotly.express as px
+import pandas as pd
 from pyech import ECH
-
-st.set_page_config(page_title="PyECH")
-
-hide_streamlit_style = """
-<style>
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-.css-12oz5g7 {padding-top: 2rem;}
-</style>
-
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-
-categorical_dict = {"Auto": None, "Categórica": True, "No categórica": False}
-function_dict = {"Suma": "sum", "Promedio": "mean", "Recuento": "count"}
-weights_dict = {"Anual": "pesoano", "Semestral": "pesosem", "Trimestral": "pesotri", "Mensual": "pesomen"}
+from dash import html, dcc, Dash, callback_context
+from dash.exceptions import PreventUpdate
+from dash.dependencies import Input, Output, State
+from dash_bootstrap_templates import load_figure_template
+from dash.dash_table import DataTable
+from dash.dash_table.Format import Format, Scheme, Trim
 
 
-def load_survey(year):
-    survey = ECH()
-    survey.load(year=year)
-    st.session_state.ech = survey
-    return
+stylesheet = dbc.themes.FLATLY
+dbc_css = (
+    "https://cdn.jsdelivr.net/gh/AnnMarieW/dash-bootstrap-templates@V1.0.2/dbc.min.css"
+)
 
 
-def set_weights(weights):
-    st.session_state.ech.weights = weights
-    return
+app = Dash(
+    __name__,
+    external_stylesheets=[stylesheet, dbc_css],
+    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
+)
+
+template = "flatly"
+load_figure_template(template)
 
 
-st.sidebar.image("https://github.com/CPA-Analytics/pyech/raw/master/logo.png")
-st.sidebar.markdown("PyECH es un procesador de la Encuesta Continua de Hogares del INE escrito en Python.")
-st.sidebar.markdown("Esta webapp representa la funcionalidad más básica de PyECH, pero que a priori abraca la mayoría de los análisis fundamentales que se pueden hacer con la Encuesta Continua de Hogares: cruzar variables.")
-st.sidebar.markdown("El paquete de Python sobre el cual esta app está construida también permite calcular percentiles, convertir variables a precios constantes y dólares, y en general brinda una interfaz flexible para trabajar con la encuesta. [Este notebook en Google Colab](https://colab.research.google.com/github/CPA-Analytics/pyech/blob/master/examples/example.ipynb) recorre la API de PyECH y muestra su funcionalidad")
-st.sidebar.markdown("---")
-st.sidebar.markdown("""
-                    * [Github](https://github.com/CPA-Analytics/pyech)
-                    * [PyPI](https://pypi.org/project/pyech/)
-                    * [Documentación](https://pyech.readthedocs.io/en/latest/)
-                    """)
-st.title("PyECH")
-st.caption("Procesamiento de la ECH del INE en Python.")
-section = st.selectbox("Sección", options=["Carga", "Resumir variables", "Explorar diccionario"], index=0)
-if "ech" in st.session_state:
-    st.markdown(f"**Encuesta cargada**: {st.session_state.ech.data['anio'][0]} | **Ponderador**: {st.session_state.ech.weights}")
-st.markdown("---")
-
-if section == "Carga":
-    year_select = st.selectbox(label="Seleccionar año de encuesta", options=list(range(2006, 2021)), index=13)
-    survey_load_button = st.button("Aceptar", on_click=load_survey, args=(year_select,), key=0)
-    if "ech" in st.session_state:
-        weights_select = st.selectbox("Seleccionar ponderador", options=weights_dict.keys(),
-                                        index=0)
-        st.caption("No todos los ponderadores están presentes en todas las encuestas.")
-        weights_set_button = st.button("Aceptar", on_click=set_weights, args=(weights_dict[weights_select],), key=1)
+def dbc_dropdown(dropdown: dcc.Dropdown):
+    return html.Div(dropdown, className="dash-bootstrap")
 
 
-elif section != "Carga" and "ech" in st.session_state and st.session_state.ech.weights not in st.session_state.ech.data.columns:
-    st.markdown(f"El ponderador {st.session_state.ech.weights} no está disponible en la ECH {st.session_state.ech.data['anio'][0]}. Seleccionar otro.")
+NAVBAR = dbc.Navbar(
+    dbc.Container(
+        [
+            html.A(
+                # Use row and col to control vertical alignment of logo / brand
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            html.Img(
+                                src="https://github.com/CPA-Analytics/pyech/raw/master/logo.png",
+                                height="30px",
+                            )
+                        ),
+                    ],
+                    align="center",
+                    className="g-0",
+                ),
+                href="/",
+                style={"textDecoration": "none"},
+            ),
+            dbc.NavbarToggler(id="navbar-toggler", n_clicks=0),
+            dbc.Collapse(
+                dbc.Nav(
+                    [
+                        dbc.NavItem(
+                            dbc.NavLink(
+                                "Github",
+                                href="https://github.com/cpa-analytics/pyech",
+                                external_link=True,
+                            )
+                        ),
+                        dbc.NavItem(
+                            dbc.NavLink(
+                                "PyPI",
+                                href="https://pypi.org/project/pyech/0.0.15/",
+                                external_link=True,
+                            )
+                        ),
+                        dbc.NavItem(
+                            dbc.NavLink(
+                                "Documentación",
+                                href="https://pyech.readthedocs.io/en/latest/?badge=latest#",
+                                external_link=True,
+                            )
+                        ),
+                    ]
+                ),
+                id="navbar-collapse",
+                is_open=False,
+                navbar=True,
+            ),
+        ],
+        fluid=True,
+    ),
+    color="light",
+)
 
-elif section == "Explorar diccionario" and "ech" in st.session_state:
-    col1, col2 = st.columns(2)
-    term = col1.text_input("Términos de búsqueda", value="ingreso")
-    n_elements = col2.slider("Cantidad de elementos", min_value=1, value=10)
-    st.dataframe(st.session_state.ech.search_dictionary(term=term).head(n_elements).astype(str))
+SURVEY_CHOICE = dbc.Row(
+    [
+        dbc.Col(
+            [
+                dbc_dropdown(
+                    dcc.Dropdown(
+                        id="year",
+                        options=[{"label": i, "value": i} for i in range(2006, 2021)],
+                        placeholder="Año de encuesta",
+                        clearable=False,
+                        className="mb-2",
+                    )
+                ),
+            ],
+            width=12,
+        ),
+        dbc.Col(
+            [
+                dbc_dropdown(
+                    dcc.Dropdown(
+                        id="weights",
+                        options=[
+                            {"label": "Anual (pesoano)", "value": "pesoano"},
+                            {"label": "Mensual (pesomen)", "value": "pesomen"},
+                        ],
+                        placeholder="Ponderador",
+                    )
+                ),
+            ],
+            width=12,
+        ),
+    ],
+)
 
-elif section == "Resumir variables" and "ech" in st.session_state:
-    col1, col2 = st.columns(2)
-    variable_select = col1.selectbox("Seleccionar variable", options=st.session_state.ech.data.columns)
-    group_select = col2.multiselect("Seleccionar agrupadores", options=st.session_state.ech.data.columns)
-    function_select = col1.selectbox("Seleccionar operación", options=["Suma", "Promedio", "Recuento"])
-    col1.caption("Si la variable es categórica solo se agregará mediante recuento.")
-    categorical_select = col2.selectbox("Definir tipo de variable", options=["Auto", "Categórica", "No categórica"], index=0)
-    try:
-        summ = st.session_state.ech.summarize(variable_select, by=group_select, is_categorical=categorical_dict[categorical_select],
-                                aggfunc=function_dict[function_select], variable_labels=True)
-        st.dataframe(summ)
-        st.download_button("Descargar CSV", mime="text/csv", data=summ.to_csv(encoding="latin1"), file_name="pyech-data.csv")
-    except:
+SUMMARIZER = html.Div(
+    [
+        html.Br(),
+        dbc.Form(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            [
+                                dbc.Label("Seleccionar variable"),
+                                dbc_dropdown(
+                                    dcc.Dropdown(
+                                        id="sumvar",
+                                        disabled=True,
+                                        placeholder="Variable",
+                                    )
+                                ),
+                            ],
+                            md=3,
+                            class_name="mb-2",
+                        ),
+                        dbc.Col(
+                            [
+                                dbc.Label("Seleccionar agrupadores"),
+                                dbc_dropdown(
+                                    dcc.Dropdown(
+                                        id="by",
+                                        multi=True,
+                                        disabled=True,
+                                        placeholder="Agrupadores",
+                                    )
+                                ),
+                            ],
+                            md=3,
+                            class_name="mb-2",
+                        ),
+                        dbc.Col(
+                            [
+                                dbc.Label("Seleccionar método"),
+                                dbc_dropdown(
+                                    dcc.Dropdown(
+                                        id="aggfunc",
+                                        clearable=False,
+                                        placeholder="Función",
+                                        disabled=True,
+                                        options=[
+                                            {"label": "Suma", "value": "sum"},
+                                            {"label": "Promedio", "value": "mean"},
+                                            {
+                                                "label": "Recuento",
+                                                "value": "count",
+                                            },
+                                        ],
+                                        value="mean",
+                                    )
+                                ),
+                            ],
+                            md=2,
+                            class_name="mb-2",
+                        ),
+                        dbc.Col(
+                            [
+                                dbc.Label("Seleccionar tipo de variable"),
+                                dbc_dropdown(
+                                    dcc.Dropdown(
+                                        id="is-categorical",
+                                        placeholder="Tipo",
+                                        disabled=True,
+                                        clearable=False,
+                                        options=[
+                                            {"label": "Auto", "value": "None"},
+                                            {"label": "Categórica", "value": "True"},
+                                            {
+                                                "label": "No categórica",
+                                                "value": "False",
+                                            },
+                                        ],
+                                        value="None",
+                                    )
+                                ),
+                            ],
+                            md=2,
+                            class_name="mb-2",
+                        ),
+                        dbc.Col(
+                            [
+                                dbc.Label("Seleccionar nivel"),
+                                dbc_dropdown(
+                                    dcc.Dropdown(
+                                        id="household",
+                                        placeholder="Nivel",
+                                        clearable=False,
+                                        options=[
+                                            {"label": "Hogares", "value": "True"},
+                                            {"label": "Personas", "value": "False"},
+                                        ],
+                                        disabled=True,
+                                        value="False",
+                                    )
+                                ),
+                            ],
+                            md=2,
+                        ),
+                    ]
+                )
+            ]
+        ),
+        html.Br(),
+    ],
+)
+
+
+CONTROLS = dbc.Row(
+    [
+        dbc.Col(
+            [
+                dbc.Label("Eje X"),
+                dbc_dropdown(
+                    dcc.Dropdown(
+                        id="x-axis",
+                        placeholder="Eje X",
+                        clearable=True,
+                    )
+                ),
+            ],
+            md=3,
+        ),
+        dbc.Col(
+            [
+                dbc.Label("Color"),
+                dbc_dropdown(
+                    dcc.Dropdown(
+                        id="color",
+                        placeholder="Color",
+                        clearable=True,
+                    )
+                ),
+            ],
+            md=3,
+        ),
+        dbc.Col(
+            [
+                dbc.Label("Columnas"),
+                dbc_dropdown(
+                    dcc.Dropdown(
+                        id="facet-col",
+                        placeholder="Columnas",
+                        clearable=True,
+                    )
+                ),
+            ],
+            md=3,
+        ),
+        dbc.Col(
+            [
+                dbc.Label("Filas"),
+                dbc_dropdown(
+                    dcc.Dropdown(
+                        id="facet-row",
+                        placeholder="Filas",
+                        clearable=True,
+                    )
+                ),
+            ],
+            md=3,
+        ),
+    ],
+)
+
+RESULTS = dbc.Fade(
+    dbc.Accordion(
+        [
+            dbc.AccordionItem(
+                [html.Br(), CONTROLS, html.Br(), html.Div(id="chart-div")],
+                title="Gráfico interactivo",
+            ),
+            dbc.AccordionItem(
+                [html.Br(), html.Div(id="table-div")], title="Tabla de datos"
+            ),
+        ],
+        flush=True,
+    ),
+    is_in=False,
+    id="results-fade",
+    className="px-5",
+)
+
+
+app.layout = html.Div(
+    [
+        NAVBAR,
+        dbc.Container(
+            [
+                dbc.Offcanvas(
+                    [
+                        html.Img(
+                            src="https://github.com/CPA-Analytics/pyech/raw/master/logo.png",
+                            width="100%",
+                            className="mb-3",
+                        ),
+                        dcc.Markdown(
+                            """
+                             PyECH es un procesador de la Encuesta Continua de Hogares del INE escrito en Python.
+                             Esta app brinda acceso a un subset de la funcionalidad completa de la librería: calcular estadísticos resumen y cruzar variables.
+
+                            [Este notebook en Google Colab](https://colab.research.google.com/github/CPA-Analytics/pyech/blob/master/examples/example.ipynb) recorre la API de PyECH y muestra la funcionalidad completa.
+                             """
+                        ),
+                        html.Br(),
+                        html.H3("Seleccionar año de encuesta y ponderador"),
+                        SURVEY_CHOICE,
+                    ],
+                    is_open=True,
+                    id="offcanvas",
+                    scrollable=True,
+                ),
+                dbc.Button(
+                    ">> Seleccionar año y ponderador para poder usar la app",
+                    id="open-offcanvas",
+                    color="secondary",
+                    class_name="my-3",
+                ),
+                dbc.Tabs(
+                    [
+                        dbc.Tab(
+                            [SUMMARIZER, html.Br(), RESULTS],
+                            label="Resumir y cruzar variables",
+                        ),
+                        dbc.Tab("", label="Explorar diccionario de variables"),
+                    ]
+                ),
+                html.Br(),
+                dcc.Store(id="sum-data"),
+                dcc.Loading(
+                    html.Div(id="placeholder", hidden=True),
+                    type="dot",
+                    fullscreen=True,
+                    style={"backgroundColor": "transparent"},
+                ),
+            ],
+            fluid=True,
+        ),
+    ],
+    className="dbc",
+)
+
+
+@app.callback(
+    Output("offcanvas", "is_open"),
+    Input("open-offcanvas", "n_clicks"),
+    [State("offcanvas", "is_open")],
+)
+def toggle_offcanvas(n, is_open):
+    if n:
+        return not is_open
+    return is_open
+
+
+@app.callback(
+    Output("navbar-collapse", "is_open"),
+    [Input("navbar-toggler", "n_clicks")],
+    [State("navbar-collapse", "is_open")],
+)
+def toggle_navbar_collapse(n, is_open):
+    if n:
+        return not is_open
+    return is_open
+
+
+survey = ECH()
+
+
+@app.callback(
+    Output("sumvar", "disabled"),
+    Output("by", "disabled"),
+    Output("aggfunc", "disabled"),
+    Output("is-categorical", "disabled"),
+    Output("household", "disabled"),
+    Output("sumvar", "options"),
+    Output("by", "options"),
+    Output("open-offcanvas", "color"),
+    Output("placeholder", "children"),
+    Output("sumvar", "value"),
+    Output("by", "value"),
+    Input("year", "value"),
+    Input("weights", "value"),
+)
+def set_survey_year_and_weights(year, weights):
+    fully_loaded = False
+    ctx = callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if trigger_id == "year":
+        survey.load(int(year))
+        if weights:
+            survey.weights = weights
+            fully_loaded = True
+    elif trigger_id == "weights" and year:
+        survey.weights = weights
+        fully_loaded = True
+    else:
         pass
+    if fully_loaded:
+        options = [{"label": i, "value": i} for i in survey.data.columns]
+        return (
+            False,
+            False,
+            False,
+            False,
+            False,
+            options,
+            options,
+            "secondary",
+            0,
+            None,
+            None,
+        )
+    else:
+        return True, True, True, True, True, [], [], "primary", 0, None, None
 
-else:
-    st.markdown("Una encuesta tiene que ser cargada en la sección de _Carga_ para poder resumir variables o explorar el diccionario.")
+
+@app.callback(
+    Output("sum-data", "data"),
+    Output("results-fade", "is_in"),
+    Input("sumvar", "value"),
+    Input("by", "value"),
+    Input("aggfunc", "value"),
+    Input("is-categorical", "value"),
+    Input("household", "value"),
+    Input("weights", "value"),
+)
+def summarize(sumvar, by, aggfunc, is_categorical, household_level, weights):
+    if sumvar:
+        is_categorical = ast.literal_eval(is_categorical)
+        household_level = ast.literal_eval(household_level)
+        summarized = survey.summarize(
+            sumvar,
+            by,
+            aggfunc=aggfunc,
+            is_categorical=is_categorical,
+            household_level=household_level,
+        )
+        summarized = summarized.reset_index()
+        records = summarized.to_dict("records")
+        return records, True
+    else:
+        return None, False
+
+
+@app.callback(
+    Output("x-axis", "value"),
+    Output("color", "value"),
+    Output("facet-col", "value"),
+    Output("facet-row", "value"),
+    Input("sum-data", "data"),
+    Input("x-axis", "value"),
+    Input("color", "value"),
+    Input("facet-col", "value"),
+    Input("facet-row", "value"),
+    Input("sumvar", "value"),
+)
+def validate_chart_values(data, x_axis, color, facet_col, facet_row, sumvar):
+    if not data:
+        raise PreventUpdate
+    data = pd.DataFrame.from_records(data, coerce_float=True, index="index")
+    values = [
+        x if x in data.columns else None for x in [x_axis, color, facet_col, facet_row]
+    ]
+    if "Recuento" in data.columns:
+        values[0] = sumvar
+    return values
+
+
+@app.callback(
+    Output("x-axis", "options"),
+    Output("color", "options"),
+    Output("facet-col", "options"),
+    Output("facet-row", "options"),
+    Input("by", "value"),
+    Input("sum-data", "data"),
+    Input("sumvar", "value"),
+)
+def set_chart_controls_options(by, data, sumvar):
+    if not data:
+        raise PreventUpdate
+    data = pd.DataFrame.from_records(data, coerce_float=True, index="index")
+    if by:
+        options = [{"label": i, "value": i} for i in by]
+    else:
+        options = []
+    if "Recuento" in data.columns:
+        return [{"label": sumvar, "value": sumvar}], options, options, options
+    else:
+        return options, options, options, options
+
+
+@app.callback(
+    Output("table-div", "children"),
+    Output("chart-div", "children"),
+    Input("sum-data", "data"),
+    Input("sumvar", "value"),
+    Input("x-axis", "value"),
+    Input("color", "value"),
+    Input("facet-col", "value"),
+    Input("facet-row", "value"),
+    State("weights", "value"),
+    State("year", "value"),
+)
+def create_table_and_chart(
+    data, sumvar, x_axis, color, facet_col, facet_row, weights, year
+):
+    if not data:
+        raise PreventUpdate
+    if sumvar:
+        data = pd.DataFrame.from_records(data, coerce_float=True, index="index")
+        name_sumvar = survey.metadata.column_names_to_labels[sumvar]
+        if "Recuento" in data.columns:
+            plot = px.bar(
+                data,
+                x=x_axis,
+                y="Recuento",
+                color=color,
+                facet_col=facet_col,
+                facet_row=facet_row,
+                barmode="group",
+                color_discrete_sequence=px.colors.qualitative.Prism,
+                color_continuous_scale=px.colors.sequential.thermal,
+                template=template,
+                title=f"{name_sumvar} ({year}, {weights})",
+            )
+        else:
+            plot = px.bar(
+                data,
+                x=x_axis,
+                y=sumvar,
+                color=color,
+                facet_col=facet_col,
+                facet_row=facet_row,
+                barmode="group",
+                color_discrete_sequence=px.colors.qualitative.Prism,
+                color_continuous_scale=px.colors.sequential.thermal,
+                template=template,
+                title=f"{name_sumvar} ({year}, {weights})",
+            )
+        dtypes = ["text" if i == "object" else "numeric" for i in data.dtypes]
+        column_formats = [
+            {
+                "name": survey.metadata.column_names_to_labels[i],
+                "id": i,
+                "type": d,
+                "format": Format(precision=4, scheme=Scheme.fixed, trim=Trim.yes).group(
+                    True
+                ),
+            }
+            if i != "Recuento"
+            else {
+                "name": "Recuento",
+                "id": "Recuento",
+                "type": "numeric",
+                "format": Format(precision=4, scheme=Scheme.fixed, trim=Trim.yes).group(
+                    True
+                ),
+            }
+            for i, d in zip(data.columns, dtypes)
+        ]
+        table = DataTable(
+            id="dash-table",
+            data=data.to_dict("records"),
+            columns=column_formats,
+            sort_action="native",
+            filter_action="native",
+            page_action="native",
+            page_size=20,
+        )
+        return table, dcc.Graph(figure=plot, id="chart")
+    else:
+        return None, None
+
+
+if __name__ == "__main__":
+    app.run_server(debug=True)

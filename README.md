@@ -1,3 +1,3 @@
 # PyECH Webapp
 
-PyECH minimal UI built with Streamlit.
+PyECH minimal UI built with Plotly Dash.
