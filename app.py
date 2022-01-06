@@ -3,6 +3,7 @@ import ast
 import dash_bootstrap_components as dbc
 import plotly.express as px
 import pandas as pd
+import plotly.io as pio
 from pyech import ECH
 from dash import html, dcc, Dash, callback_context
 from dash.exceptions import PreventUpdate
@@ -27,6 +28,7 @@ app = Dash(
 
 template = "flatly"
 load_figure_template(template)
+pio.templates[template].layout.margin = {"l": 10, "r": 10}
 
 
 def dbc_dropdown(dropdown: dcc.Dropdown):
@@ -308,7 +310,7 @@ RESULTS = dbc.Fade(
     ),
     is_in=False,
     id="results-fade",
-    class_name="px-5",
+    class_name="px-md-5",
 )
 
 DICTIONARY = dbc.Fade(
@@ -321,7 +323,7 @@ DICTIONARY = dbc.Fade(
                     class_name="mb-3",
                     id="dictionary-search",
                 ),
-                width=6,
+                md=6,
             )
         ),
         html.Div(id="dictionary-div"),
@@ -353,6 +355,12 @@ app.layout = html.Div(
                         html.Br(),
                         html.H3("Seleccionar año de encuesta y ponderador"),
                         SURVEY_CHOICE,
+                        dcc.Loading(
+                            html.Div(id="placeholder", hidden=True),
+                            type="dot",
+                            fullscreen=True,
+                            style={"backgroundColor": "transparent"},
+                        ),
                     ],
                     is_open=True,
                     id="offcanvas",
@@ -375,12 +383,6 @@ app.layout = html.Div(
                 ),
                 html.Br(),
                 dcc.Store(id="sum-data"),
-                dcc.Loading(
-                    html.Div(id="placeholder", hidden=True),
-                    type="dot",
-                    fullscreen=True,
-                    style={"backgroundColor": "transparent"},
-                ),
             ],
             fluid=True,
         ),
@@ -654,6 +656,7 @@ def create_table_and_chart(
             filter_action="native",
             page_action="native",
             page_size=50,
+            export_format="csv",
         )
         return table, dcc.Graph(figure=plot, id="chart")
     else:
