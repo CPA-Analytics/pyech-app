@@ -37,6 +37,8 @@ flask==2.0.2
     #   flask-compress
 flask-compress==1.10.1
     # via dash
+gunicorn==20.1.0
+    # via -r requirements.in
 importlib-metadata==3.10.1
     # via dash-bootstrap-templates
 importlib-resources==5.4.0
@@ -102,3 +104,6 @@ zipp==3.6.0
     # via
     #   importlib-metadata
     #   importlib-resources
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools

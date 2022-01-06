@@ -26,6 +26,8 @@ app = Dash(
     suppress_callback_exceptions=True,
 )
 
+server = app.server
+
 template = "flatly"
 load_figure_template(template)
 pio.templates[template].layout.margin = {"l": 10, "r": 10}
