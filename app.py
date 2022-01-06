@@ -22,6 +22,7 @@ app = Dash(
     __name__,
     external_stylesheets=[stylesheet, dbc_css],
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
+    suppress_callback_exceptions=True,
 )
 
 template = "flatly"
@@ -307,9 +308,27 @@ RESULTS = dbc.Fade(
     ),
     is_in=False,
     id="results-fade",
-    className="px-5",
+    class_name="px-5",
 )
 
+DICTIONARY = dbc.Fade(
+    [
+        html.Br(),
+        dbc.Row(
+            dbc.Col(
+                dbc.Input(
+                    placeholder="Ingresar término de búsqueda",
+                    class_name="mb-3",
+                    id="dictionary-search",
+                ),
+                width=6,
+            )
+        ),
+        html.Div(id="dictionary-div"),
+    ],
+    is_in=False,
+    id="dictionary-fade",
+)
 
 app.layout = html.Div(
     [
@@ -351,7 +370,7 @@ app.layout = html.Div(
                             [SUMMARIZER, html.Br(), RESULTS],
                             label="Resumir y cruzar variables",
                         ),
-                        dbc.Tab("", label="Explorar diccionario de variables"),
+                        dbc.Tab(DICTIONARY, label="Explorar diccionario de variables"),
                     ]
                 ),
                 html.Br(),
@@ -407,10 +426,12 @@ survey = ECH()
     Output("placeholder", "children"),
     Output("sumvar", "value"),
     Output("by", "value"),
+    Output("dictionary-div", "children"),
+    Output("dictionary-fade", "is_in"),
     Input("year", "value"),
     Input("weights", "value"),
 )
-def set_survey_year_and_weights(year, weights):
+def set_survey_year_and_weights_and_create_dictionary(year, weights):
     fully_loaded = False
     ctx = callback_context
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
@@ -426,6 +447,15 @@ def set_survey_year_and_weights(year, weights):
         pass
     if fully_loaded:
         options = [{"label": i, "value": i} for i in survey.data.columns]
+        dictionary = DataTable(
+            data=survey.dictionary.to_dict("records"),
+            columns=[{"name": i, "id": i} for i in survey.dictionary.columns],
+            sort_action="native",
+            filter_action="native",
+            page_action="native",
+            page_size=50,
+            id="dictionary-table",
+        )
         return (
             False,
             False,
@@ -438,9 +468,38 @@ def set_survey_year_and_weights(year, weights):
             0,
             None,
             None,
+            dictionary,
+            True,
         )
     else:
-        return True, True, True, True, True, [], [], "primary", 0, None, None
+        return (
+            True,
+            True,
+            True,
+            True,
+            True,
+            [],
+            [],
+            "primary",
+            0,
+            None,
+            None,
+            None,
+            False,
+        )
+
+
+@app.callback(
+    Output("dictionary-table", "data"),
+    Input("dictionary-search", "value"),
+    prevent_initial_call=True,
+)
+def filter_dictionary(term):
+    if hasattr(survey, "dictionary"):
+        filtered = survey.search_dictionary(term)
+        return filtered.to_dict("records")
+    else:
+        raise PreventUpdate
 
 
 @app.callback(
@@ -594,7 +653,7 @@ def create_table_and_chart(
             sort_action="native",
             filter_action="native",
             page_action="native",
-            page_size=20,
+            page_size=50,
         )
         return table, dcc.Graph(figure=plot, id="chart")
     else:
