@@ -66,20 +66,15 @@ NAVBAR = dbc.Navbar(
                                 "Github",
                                 href="https://github.com/cpa-analytics/pyech",
                                 external_link=True,
+                                target="_parent",
                             )
                         ),
                         dbc.NavItem(
                             dbc.NavLink(
                                 "PyPI",
-                                href="https://pypi.org/project/pyech/0.0.15/",
+                                href="https://pypi.org/project/pyech",
                                 external_link=True,
-                            )
-                        ),
-                        dbc.NavItem(
-                            dbc.NavLink(
-                                "Documentación",
-                                href="https://pyech.readthedocs.io/en/latest/?badge=latest#",
-                                external_link=True,
+                                target="_parent",
                             )
                         ),
                     ]
@@ -350,18 +345,17 @@ app.layout = html.Div(
                             """
                              PyECH es un procesador de la Encuesta Continua de Hogares del INE escrito en Python.
                              Esta app brinda acceso a un subset de la funcionalidad completa de la librería: calcular estadísticos resumen y cruzar variables.
-
-                            [Este notebook en Google Colab](https://colab.research.google.com/github/CPA-Analytics/pyech/blob/master/examples/example.ipynb) recorre la API de PyECH y muestra la funcionalidad completa.
                              """
                         ),
                         html.Br(),
-                        html.H3("Seleccionar año de encuesta y ponderador"),
+                        html.H5("Seleccionar año de encuesta y ponderador"),
                         SURVEY_CHOICE,
+                        html.P("🕑 Cargar cada encuesta puede llevar entre 20 y 40 segundos dependiendo del año.", className="text-muted mt-2"),
                         dcc.Loading(
-                            html.Div(id="placeholder", hidden=True),
+                            html.Div(id="placeholder-1", hidden=True),
                             type="dot",
                             fullscreen=True,
-                            style={"backgroundColor": "transparent"},
+                            style={"backgroundColor": "rgba(250, 250, 250, 0.5)"},
                         ),
                     ],
                     is_open=True,
@@ -369,10 +363,18 @@ app.layout = html.Div(
                     scrollable=True,
                 ),
                 dbc.Button(
-                    ">> Seleccionar año y ponderador para poder usar la app",
+                    ">> Seleccionar encuesta y ponderador",
                     id="open-offcanvas",
-                    color="secondary",
+                    color="primary",
                     class_name="my-3",
+                ),
+                #dbc.Toast("📈 Encuesta cargada.", id="toast", color="success", duration=5000, dismissable=True,
+                #            is_open=False),
+                dcc.Loading(
+                    html.Div(id="placeholder-2", hidden=True),
+                    type="dot",
+                    fullscreen=True,
+                    style={"backgroundColor": "rgba(250, 250, 250, 0.5)"},
                 ),
                 dbc.Tabs(
                     [
@@ -396,9 +398,15 @@ app.layout = html.Div(
 @app.callback(
     Output("offcanvas", "is_open"),
     Input("open-offcanvas", "n_clicks"),
-    [State("offcanvas", "is_open")],
+    Input("year", "value"),
+    Input("weights", "value"),
+    State("offcanvas", "is_open"),
 )
-def toggle_offcanvas(n, is_open):
+def toggle_offcanvas(n, year, weights, is_open):
+    ctx = callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    if trigger_id in ["year", "weights"] and year and weights:
+        return False
     if n:
         return not is_open
     return is_open
@@ -427,11 +435,14 @@ survey = ECH()
     Output("sumvar", "options"),
     Output("by", "options"),
     Output("open-offcanvas", "color"),
-    Output("placeholder", "children"),
+    Output("open-offcanvas", "children"),
+    Output("placeholder-1", "children"),
+    Output("placeholder-2", "children"),
     Output("sumvar", "value"),
     Output("by", "value"),
     Output("dictionary-div", "children"),
     Output("dictionary-fade", "is_in"),
+    #Output("toast", "is_open"),
     Input("year", "value"),
     Input("weights", "value"),
 )
@@ -468,12 +479,15 @@ def set_survey_year_and_weights_and_create_dictionary(year, weights):
             False,
             options,
             options,
-            "secondary",
+            "primary",
+            f">> Año: {survey.data['anio'][0]} | Ponderador: {survey.weights}",
+            0,
             0,
             None,
             None,
             dictionary,
             True,
+            #True,
         )
     else:
         return (
@@ -484,12 +498,15 @@ def set_survey_year_and_weights_and_create_dictionary(year, weights):
             True,
             [],
             [],
-            "primary",
+            "secondary",
+            ">> Seleccionar encuesta y ponderador",
+            0,
             0,
             None,
             None,
             None,
             False,
+            #False,
         )
 
 
