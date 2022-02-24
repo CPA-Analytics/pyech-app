@@ -451,7 +451,7 @@ def set_survey_year_and_weights_and_create_dictionary(year, weights):
     ctx = callback_context
     trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
     if trigger_id == "year":
-        survey.load(int(year))
+        survey.load(int(year), from_repo=True)
         if weights:
             survey.weights = weights
             fully_loaded = True
