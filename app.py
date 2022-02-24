@@ -96,7 +96,7 @@ SURVEY_CHOICE = dbc.Row(
                 dbc_dropdown(
                     dcc.Dropdown(
                         id="year",
-                        options=[{"label": i, "value": i} for i in range(2006, 2021)],
+                        options=[{"label": i, "value": i} for i in range(2007, 2021)],
                         placeholder="Año de encuesta",
                         clearable=False,
                         className="mb-2",
