@@ -461,7 +461,7 @@ def set_survey_year_and_weights_and_create_dictionary(year, weights):
     else:
         pass
     if fully_loaded:
-        options = [{"label": i, "value": i} for i in survey.data.columns]
+        options = [{"label": survey.metadata.column_labels_and_names[i], "value": i} for i in survey.data.columns]
         dictionary = DataTable(
             data=survey.dictionary.to_dict("records"),
             columns=[{"name": i, "id": i} for i in survey.dictionary.columns],
@@ -589,11 +589,11 @@ def set_chart_controls_options(by, data, sumvar):
         raise PreventUpdate
     data = pd.DataFrame.from_records(data, coerce_float=True, index="index")
     if by:
-        options = [{"label": i, "value": i} for i in by]
+        options = [{"label": survey.metadata.column_labels_and_names[i], "value": i} for i in by]
     else:
         options = []
     if "Recuento" in data.columns:
-        return [{"label": sumvar, "value": sumvar}], options, options, options
+        return [{"label": survey.metadata.column_labels_and_names[sumvar], "value": sumvar}], options, options, options
     else:
         return options, options, options, options
 
