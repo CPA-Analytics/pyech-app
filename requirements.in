@@ -2,6 +2,6 @@ dash
 dash-bootstrap-components
 dash-bootstrap-templates
 plotly
-git+https://github.com/CPA-Analytics/pyech@ade18ca7d57c5ee54c685451be6ec511e90734ff#egg=pyech
+git+https://github.com/CPA-Analytics/pyech@22637444e2f59843f1cd819a6b54f16bbe5608df#egg=pyech
 black
 gunicorn
